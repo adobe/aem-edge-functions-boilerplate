@@ -1,0 +1,17 @@
+kind: 'CDN'
+version: '1'
+data:
+  originSelectors:
+    rules:
+      - name: route-to-first-compute
+        when: { reqProperty: path, equals: "/weather" }
+        action:
+          type: selectAemOrigin
+          originName: compute-first-compute
+          skipCache: true
+      - name: route-to-second-compute
+        when: { reqProperty: path, equals: "/hello-world" }
+        action:
+          type: selectAemOrigin
+          originName: compute-second-compute
+          skipCache: true
