@@ -1,8 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@fastly/expressly": "^2.3.0",
-    "@fastly/js-compute": "^3.0.0"
+    "@fastly/js-compute": "3.38.2"
   },
   "scripts": {
     "build": "js-compute-runtime ./src/index.js ./bin/main.wasm",
@@ -10,6 +9,6 @@
     "test": "mocha"
   },
   "devDependencies": {
-    "mocha": "^11.0.0"
+    "mocha": "12.0.0-beta-5"
   }
 }
