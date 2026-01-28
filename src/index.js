@@ -12,39 +12,37 @@ governing permissions and limitations under the License.
 
 /// <reference types="@fastly/js-compute" />
 
-import { Router } from "@fastly/expressly";
-
 import * as response from './lib/response.js';
 import { log } from './lib/log.js';
 import { weatherHandler } from "./weather.js";
 
-const router = new Router();
+addEventListener("fetch", (event) => event.respondWith(handleRequest(event)));
 
-router.use((req, res) => {
-  res.on("finish", (finalResponse) => {
-    log(req, finalResponse);
-  });
-});
+async function handleRequest(event) {
+  const req = event.request;
+  const url = new URL(req.url);
 
-router.use((err, req, res) => {
-  if (err.status === 404) {
-    res.send(response.notFound());
-  } else if (err) {
+  let finalResponse;
+
+  try {
+    // Route matching
+    if (url.pathname === "/" && req.method === "GET") {
+      finalResponse = new Response("Hello World from the edge!", { status: 200 });
+    } else if (url.pathname === "/hello-world" && req.method === "GET") {
+      finalResponse = new Response("Hello World from the edge!", { status: 200 });
+    } else if (url.pathname === "/weather" && req.method === "GET") {
+      finalResponse = await weatherHandler(req);
+    } else {
+      finalResponse = response.notFound();
+    }
+  } catch (err) {
     console.log(err);
-    res.send(response.error());
+    finalResponse = response.error();
   }
-});
 
-router.get("/", async (req, res) => {
-  return res.send(new Response("Hello World from the edge!", { status: 200 }));
-});
+  // Log the request and response
+  log(req, finalResponse);
 
-router.get("/hello-world", async (req, res) => {
-  return res.send(new Response("Hello World from the edge!", { status: 200 }));
-});
+  return finalResponse;
+}
 
-router.get("/weather", async (req, res) => {
-  return res.send(await weatherHandler(req));
-});
-
-router.listen();
