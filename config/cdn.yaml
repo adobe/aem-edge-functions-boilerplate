@@ -3,15 +3,15 @@ version: '1'
 data:
   originSelectors:
     rules:
-      - name: route-to-first-compute
+      - name: route-to-first-edge-function
         when: { reqProperty: path, equals: "/weather" }
         action:
           type: selectAemOrigin
-          originName: compute-first-compute
+          originName: edgefunction-first-edge-function
           skipCache: true
-      - name: route-to-second-compute
+      - name: route-to-second-edge-function
         when: { reqProperty: path, equals: "/hello-world" }
         action:
           type: selectAemOrigin
-          originName: compute-second-compute
+          originName: edgefunction-second-edge-function
           skipCache: true
