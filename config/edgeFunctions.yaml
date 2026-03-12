@@ -1,9 +1,9 @@
-kind: "Compute"
+kind: "EdgeFunctions"
 version: "1"
 data:
   services:
-    - name: first-compute
-    - name: second-compute
+    - name: first-edge-function
+    - name: second-edge-function
   # Uncomment to enable secrets
   # secrets:
   #   - key: API_TOKEN
