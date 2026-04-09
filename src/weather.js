@@ -15,7 +15,7 @@ governing permissions and limitations under the License.
 import { getGeolocationForIpAddress } from "fastly:geolocation";
 import { SecretStoreManager } from "./lib/config";
 
-async function weatherHandler(req) {
+async function weatherHandler(req, client) {
     let apiToken = 'helloworld';
     try {
         // Serve as an example of how to use the secret store
@@ -23,7 +23,12 @@ async function weatherHandler(req) {
     } catch (e) {
         console.warn('No API_TOKEN secret found, using default api token');
     }
-    const locationInfo = getGeolocationForIpAddress(req.ip);
+    // Prefer the leftmost IP in X-Forwarded-For (original client) over
+    // client.address, which is typically just the nearest CDN edge node.
+    const xff = req.headers.get("x-forwarded-for");
+    const clientIp = xff ? xff.split(",")[0].trim() : client?.address;
+    console.log(`Received request for weather data from IP: ${clientIp} (X-Forwarded-For: ${xff ?? "not set"})`);
+    const locationInfo = getGeolocationForIpAddress(clientIp);
     console.log("Location Information:\n", locationInfo);
     const request = new Request("https://api.open-meteo.com/v1/forecast?current=temperature_2m&latitude=" + locationInfo.latitude + "&longitude=" + locationInfo.longitude);
     request.headers.set("Authorization", "Bearer " + apiToken);

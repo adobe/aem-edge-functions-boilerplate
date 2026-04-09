@@ -31,7 +31,7 @@ async function handleRequest(event) {
     } else if (url.pathname === "/hello-world" && req.method === "GET") {
       finalResponse = new Response("Hello World from the edge!", { status: 200 });
     } else if (url.pathname === "/weather" && req.method === "GET") {
-      finalResponse = await weatherHandler(req);
+      finalResponse = await weatherHandler(req, event.client);
     } else {
       finalResponse = response.notFound();
     }
