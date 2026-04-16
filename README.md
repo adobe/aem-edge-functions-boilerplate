@@ -71,7 +71,7 @@ data:
 
 The configuration is composed of:
 
-- **services**: contains a list of edge functions, where a function is composed of a **name** and a set of **origins**. The number of functions is limited to 3.
+- **services**: contains a list of edge functions, where a function is composed of a **name** and a set of **origins**. The service name must be at most **30 characters** long, start with a lowercase letter, end with a lowercase letter or digit, and contain only lowercase letters, digits, and hyphens. The number of functions is limited to 3.
 - **configs**: contains a key/value configs arrays that will be exposed to all your edge functions
 - **secrets**: contains a key/value secrets arrays that will be exposed to all your edge functions
 
