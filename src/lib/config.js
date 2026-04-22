@@ -18,7 +18,9 @@ export class SecretStoreManager {
   static instance = null;
 
   constructor() {
-    this.secrets = null;
+    this.store = null;
+    this.secretsMap = null;
+    this.secretsMapLoaded = false;
   }
 
   static getInstance() {
@@ -29,20 +31,39 @@ export class SecretStoreManager {
   }
 
   async getSecret(key) {
-    if (!this.secrets) {
+    if (!this.store) {
+      this.store = new SecretStore('secret_default');
+    }
+
+    // Try cloud format first: all secrets bundled as JSON under "secrets" key
+    if (!this.secretsMapLoaded) {
+      this.secretsMapLoaded = true;
       try {
-        const store = new SecretStore('secret_default');
-        const secretsMap = await store.get('secrets');
-        if (!secretsMap) {
-          throw new Error('Secrets not found in store');
+        const secretsEntry = await this.store.get('secrets');
+        if (secretsEntry) {
+          this.secretsMap = JSON.parse(secretsEntry.plaintext());
         }
-        this.secrets = JSON.parse(secretsMap.plaintext());
-      } catch (error) {
-        console.error('Failed to load secrets:', error);
-        throw error;
+      } catch (e) {
+        // Not available or not valid JSON — fall through to individual lookup
+        this.secretsMap = null;
       }
     }
-    return this.secrets[key];
+
+    if (this.secretsMap && key in this.secretsMap) {
+      return this.secretsMap[key];
+    }
+
+    // Fallback: fetch secret individually by key (local development)
+    try {
+      const secret = await this.store.get(key);
+      if (!secret) {
+        throw new Error(`Secret '${key}' not found in store`);
+      }
+      return secret.plaintext();
+    } catch (error) {
+      console.error(`Failed to load secret '${key}':`, error);
+      throw error;
+    }
   }
 
   static async getSecret(key) {
