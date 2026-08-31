@@ -10,7 +10,6 @@ name = "aem-edge-functions-boilerplate"
 service_id = ""
 
 [scripts]
-  build = "npm run build"
   post_init = "npm install"
 
 [local_server]
