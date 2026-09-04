@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@fastly/js-compute": "3.42.1"
+    "@fastly/js-compute": "3.45.0"
   },
   "scripts": {
     "build": "aio aem edge-functions build",
