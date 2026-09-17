@@ -1,6 +1,18 @@
 kind: 'CDN'
 version: '1'
 data:
+  requestTransformations:
+    rules:
+      # The /weather response depends on the caller's IP-based geolocation, so the same
+      # URL would otherwise return different content per visitor. Fold the client IP into
+      # the cache key (as an `ip` query parameter) so each client gets its own cache entry
+      # instead of opting out of caching. This runs before the CDN cache lookup.
+      - name: add-client-ip-to-weather
+        when: { reqProperty: path, equals: "/weather" }
+        actions:
+          - type: set
+            queryParam: ip
+            value: { reqProperty: clientIp }
   originSelectors:
     rules:
       - name: route-weather-to-edge-function
@@ -8,10 +20,8 @@ data:
         action:
           type: selectAemOrigin
           originName: edgefunction-my-edge-function
-          skipCache: true
       - name: route-hello-world-to-edge-function
         when: { reqProperty: path, equals: "/hello-world" }
         action:
           type: selectAemOrigin
           originName: edgefunction-my-edge-function
-          skipCache: true

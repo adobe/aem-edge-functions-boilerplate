@@ -84,6 +84,17 @@ Additionally, you will need to define routing rules in your CDN configuration fi
 kind: 'CDN'
 version: '1'
 data:
+  requestTransformations:
+    rules:
+      # The /weather response depends on the caller's IP-based geolocation. Fold the
+      # client IP into the cache key (as an `ip` query parameter) so the response can be
+      # cached per client instead of opting out of caching with skipCache.
+      - name: add-client-ip-to-weather
+        when: { reqProperty: path, equals: "/weather" }
+        actions:
+          - type: set
+            queryParam: ip
+            value: { reqProperty: clientIp }
   originSelectors:
     rules:
       - name: route-weather-to-edge-function
@@ -97,6 +108,8 @@ data:
           type: selectAemOrigin
           originName: edgefunction-my-edge-function
 ```
+
+> **Caching:** These routes intentionally do **not** set `skipCache: true`. `skipCache` forces every request through uncached traversal, so for cases like these it is usually better to keep caching enabled and vary the cache key when a response depends on the request. `/hello-world` is static and cached directly; `/weather` is made cacheable by keying the CDN cache on the client IP (the request transformation above) so each client is served a cached response for the duration of its `Cache-Control: max-age`. See [Caching](#caching).
 
 **Note**: If you already have a CDN configuration file, just add the origin selectors rules to your existing configuration
 
@@ -321,6 +334,23 @@ return new Response(body, {
 ```
 
 Multiple surrogate keys are separated by spaces. These surrogate keys can be used to purge the CDN cache using the [CDN Cache Purge API](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/content-delivery/cdn-cache-purge).
+
+#### Varying the CDN Cache Key
+
+By default the CDN caches a response under its URL, so the same URL returns the same cached content for every visitor. When a response depends on a request attribute — for example the `/weather` example varies by the caller's IP-based location — cache it *per that attribute* rather than disabling caching with `skipCache: true`. Fold the attribute into the URL with a CDN [request transformation](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/content-delivery/cdn-configuring-traffic#request-transformations) so it becomes part of the cache key:
+
+```yaml
+requestTransformations:
+  rules:
+    - name: add-client-ip-to-weather
+      when: { reqProperty: path, equals: "/weather" }
+      actions:
+        - type: set
+          queryParam: ip
+          value: { reqProperty: clientIp }
+```
+
+The function reads the value from the query parameter (`new URL(req.url).searchParams.get("ip")`) instead of the `X-Forwarded-For` header. Each distinct client IP then gets its own cache entry, so repeat requests are served from the CDN cache for the response's `Cache-Control: max-age` — five minutes for the weather example — without re-invoking the Edge Function.
 
 ### Edge Function Fetch Cache (Inner)
 
