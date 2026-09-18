@@ -25,14 +25,11 @@ async function weatherHandler(req, client) {
     } catch (e) {
         console.warn('No API_TOKEN secret found, using default api token');
     }
-    // The CDN request transformation (see config/cdn.yaml) injects the client IP as the
-    // `ip` query parameter so this response can be cached per client. Read it from there.
-    // Fall back to X-Forwarded-For / client.address for local development, where the CDN
-    // transformation does not run.
+    // The CDN request transformation (see config/cdn.yaml) provides the client IP as the `ip`
+    // query parameter, which is part of the cache key. `client.address` is a local fallback.
     const ipParam = new URL(req.url).searchParams.get("ip");
-    const xff = req.headers.get("x-forwarded-for");
-    const clientIp = ipParam || (xff ? xff.split(",")[0].trim() : client?.address);
-    console.log(`Received request for weather data from IP: ${clientIp} (ip param: ${ipParam ?? "not set"}, X-Forwarded-For: ${xff ?? "not set"})`);
+    const clientIp = ipParam || client?.address;
+    console.log(`Received request for weather data from IP: ${clientIp} (ip param: ${ipParam ?? "not set"})`);
     // NOTE: In local development (`serve` via Viceroy) IP geolocation is not backed by a real
     // geo database — it only returns stub data for 127.0.0.1 and null for arbitrary IPs (so
     // `/weather?ip=<any-public-ip>` will not resolve locally unless you configure
