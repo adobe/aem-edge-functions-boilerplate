@@ -25,13 +25,26 @@ async function weatherHandler(req, client) {
     } catch (e) {
         console.warn('No API_TOKEN secret found, using default api token');
     }
-    // Prefer the leftmost IP in X-Forwarded-For (original client) over
-    // client.address, which is typically just the nearest CDN edge node.
-    const xff = req.headers.get("x-forwarded-for");
-    const clientIp = xff ? xff.split(",")[0].trim() : client?.address;
-    console.log(`Received request for weather data from IP: ${clientIp} (X-Forwarded-For: ${xff ?? "not set"})`);
+    // The CDN request transformation (see config/cdn.yaml) provides the client IP as the `ip`
+    // query parameter, which is part of the cache key. `client.address` is a local fallback.
+    const ipParam = new URL(req.url).searchParams.get("ip");
+    const clientIp = ipParam || client?.address;
+    console.log(`Received request for weather data from IP: ${clientIp} (ip param: ${ipParam ?? "not set"})`);
+    // NOTE: In local development (`serve` via Viceroy) IP geolocation is not backed by a real
+    // geo database — it only returns stub data for 127.0.0.1 and null for arbitrary IPs (so
+    // `/weather?ip=<any-public-ip>` will not resolve locally unless you configure
+    // `[local_server.geolocation]` in fastly.toml). Real geolocation works when deployed.
     const locationInfo = getGeolocationForIpAddress(clientIp);
     console.log("Location Information:\n", locationInfo);
+    // Geolocation can be null for IPs the geo database can't resolve (e.g. private/loopback
+    // addresses, or arbitrary IPs when testing locally). Respond gracefully instead of
+    // dereferencing a null location. This response is not location-specific, so allow caching.
+    if (!locationInfo || locationInfo.latitude === undefined || locationInfo.longitude === undefined) {
+        return new Response(`Could not determine a location for IP ${clientIp}`, {
+            status: 200,
+            headers: { "Cache-Control": "public, max-age=300" }
+        });
+    }
     const request = new Request("https://api.open-meteo.com/v1/forecast?current=temperature_2m&latitude=" + locationInfo.latitude + "&longitude=" + locationInfo.longitude);
     request.headers.set("Authorization", "Bearer " + apiToken);
     const backendResponse = await fetch(request);
@@ -44,7 +57,11 @@ async function weatherHandler(req, client) {
         if(data.current?.temperature_2m) {
         resp = `It seems you are based in ${locationInfo.city} (Weather data by Open-Meteo.com - https://open-meteo.com/) where the local temperature is ${data.current.temperature_2m}°C`;
         }
-        return new Response(resp, { status: 200, headers: { "Cache-Control": "max-age=5m" } });
+        // Cacheable for 5 minutes at the CDN. Combined with the per-client `ip` cache key
+        // set in config/cdn.yaml, repeat requests from the same client are served from the
+        // CDN cache without re-invoking the Edge Function. (max-age is in seconds; "5m"
+        // would be an invalid value and disable caching.)
+        return new Response(resp, { status: 200, headers: { "Cache-Control": "public, max-age=300" } });
     }
 }
 
