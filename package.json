@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@fastly/js-compute": "^3.46.0"
+    "@fastly/js-compute": "^4.4.0"
   },
   "scripts": {
     "build": "aio aem edge-functions build",
@@ -9,10 +9,10 @@
     "test": "mocha"
   },
   "devDependencies": {
-    "mocha": "12.0.0-beta-9.2"
+    "mocha": "^12.0.3"
   },
   "overrides": {
-    "esbuild": ">=0.28.1",
-    "@bytecodealliance/weval": "^0.5.0"
+    "glob": "^14.0.6",
+    "minimatch": "^11.0.9"
   }
 }
